@@ -3,7 +3,8 @@ package service
 import (
 	"errors"
 	"simple-douyin/repository"
-	"strings"
+	"simple-douyin/util"
+	"time"
 )
 
 type LoginInfo struct {
@@ -18,6 +19,10 @@ type UserInfo struct {
 	FollowerCount int64
 	IsFollow      bool
 }
+
+const (
+	expiredSecond = 3600
+)
 
 func Register(username string, password string) (*LoginInfo, error) {
 	//check param
@@ -51,9 +56,14 @@ func Register(username string, password string) (*LoginInfo, error) {
 		return nil, err
 	}
 
+	token, err := util.GenToken(user.Id, time.Now().Unix()+expiredSecond)
+	if err != nil {
+		return nil, err
+	}
+
 	return &LoginInfo{
 		UserId: user.Id,
-		Token:  username + " " + password,
+		Token:  token,
 	}, nil
 }
 
@@ -82,10 +92,14 @@ func Login(username string, password string) (*LoginInfo, error) {
 	if user.Password != password {
 		return nil, errors.New("密码不正确")
 	}
+	token, err := util.GenToken(user.Id, time.Now().Unix()+expiredSecond)
+	if err != nil {
+		return nil, err
+	}
 
 	return &LoginInfo{
 		UserId: user.Id,
-		Token:  username + " " + password,
+		Token:  token,
 	}, nil
 }
 
@@ -95,10 +109,9 @@ func GetUserInfo(userId int64, token string) (*UserInfo, error) {
 	}
 
 	//varify token
-	tmp := strings.Split(token, " ")
-	login, err := Login(tmp[0], tmp[1])
-	if err != nil || login == nil {
-		return nil, errors.New("无效的token")
+	userId, err := util.ParseToken(token)
+	if err != nil {
+		return nil, err
 	}
 
 	user, err := repository.SelectById(userId)

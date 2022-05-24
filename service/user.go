@@ -2,22 +2,23 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"simple-douyin/repository"
 	"simple-douyin/util"
 	"time"
 )
 
 type LoginInfo struct {
-	UserId int64
-	Token  string
+	UserId int64  `json:"user_id"`
+	Token  string `json:"token"`
 }
 
 type UserInfo struct {
-	UserId        int64
-	Name          string
-	FollowCount   int64
-	FollowerCount int64
-	IsFollow      bool
+	UserId        int64  `json:"user_id"`
+	Name          string `json:"name"`
+	FollowCount   int64  `json:"follow_count"`
+	FollowerCount int64  `json:"follower_count"`
+	IsFollow      bool   `json:"is_follow"`
 }
 
 const (
@@ -81,7 +82,6 @@ func Login(username string, password string) (*LoginInfo, error) {
 	if len(password) > 32 {
 		return nil, errors.New("密码支持最长32个字符")
 	}
-
 	user, err := repository.SelectByName(username)
 	if err != nil {
 		return nil, err
@@ -105,18 +105,23 @@ func Login(username string, password string) (*LoginInfo, error) {
 
 func GetUserInfo(userId int64, token string) (*UserInfo, error) {
 	if userId < 0 {
-		return nil, errors.New("不合法的用户id")
+		return nil, fmt.Errorf("不合法的用户id: %v", userId)
 	}
 
 	//varify token
-	userId, err := util.ParseToken(token)
-	if err != nil {
-		return nil, err
+	if token != "" {
+		_, err := util.ParseToken(token)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	user, err := repository.SelectById(userId)
 	if err != nil {
 		return nil, err
+	}
+	if user == nil {
+		return nil, fmt.Errorf("用户id不存在: %v", userId)
 	}
 
 	return &UserInfo{

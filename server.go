@@ -15,7 +15,12 @@ func initRouter(r *gin.Engine) {
 	apiRouter := r.Group("/douyin")
 
 	// basic apis
-	apiRouter.GET("/feed/", controller.Feed)
+	apiRouter.GET("/feed/", func(c *gin.Context) {
+		latestTime := c.Query("latest_time")
+		token := c.Query("token")
+		data := controller.Feed(latestTime, token)
+		c.JSON(http.StatusOK, data)
+	})
 	apiRouter.GET("/user/", func(c *gin.Context) {
 		userId := c.Query("user_id")
 		token := c.Query("token")

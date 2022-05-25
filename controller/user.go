@@ -1,47 +1,53 @@
 package controller
 
 import (
+	"fmt"
 	"simple-douyin/service"
 	"strconv"
 )
 
-type UserData struct {
+type LoginData struct {
 	Response
-	Data interface{}
+	service.LoginInfo
 }
 
-func Register(username string, password string) *UserData {
+type UserData struct {
+	Response
+	service.UserInfo
+}
+
+func Register(username string, password string) *LoginData {
 	loginInfo, err := service.Register(username, password)
 
 	if err != nil {
-		return &UserData{
+		return &LoginData{
 			Response: Response{
 				StatusCode: 1,
 				StatusMsg:  err.Error()},
 		}
 	} else {
-		return &UserData{
+		return &LoginData{
 			Response: Response{
 				StatusCode: 0,
 			},
-			Data: loginInfo,
+			LoginInfo: *loginInfo,
 		}
 	}
 }
 
-func Login(username string, password string) *UserData {
+func Login(username string, password string) *LoginData {
 	loginInfo, err := service.Login(username, password)
 
 	if err != nil {
-		return &UserData{
+		return &LoginData{
 			Response: Response{
 				StatusCode: 1,
 				StatusMsg:  err.Error()},
 		}
 	} else {
-		return &UserData{
-			Response: Response{StatusCode: 0},
-			Data:     loginInfo,
+		return &LoginData{
+			Response:  Response{StatusCode: 0},
+			LoginInfo: *loginInfo,
 		}
 	}
 }
@@ -52,7 +58,8 @@ func UserInfo(userIdStr, token string) *UserData {
 		return &UserData{
 			Response: Response{
 				StatusCode: 1,
-				StatusMsg:  "不合法的用户id"},
+				StatusMsg:  fmt.Sprintf("不合法的用户id: %v", userIdStr),
+			},
 		}
 	}
 	userInfo, err := service.GetUserInfo(userId, token)
@@ -65,7 +72,7 @@ func UserInfo(userIdStr, token string) *UserData {
 	} else {
 		return &UserData{
 			Response: Response{StatusCode: 0},
-			Data:     userInfo,
+			UserInfo: *userInfo,
 		}
 	}
 }

@@ -2,22 +2,28 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"simple-douyin/repository"
-	"strings"
+	"simple-douyin/util"
+	"time"
 )
 
 type LoginInfo struct {
-	UserId int64
-	Token  string
+	UserId int64  `json:"user_id"`
+	Token  string `json:"token"`
 }
 
 type UserInfo struct {
-	UserId        int64
-	Name          string
-	FollowCount   int64
-	FollowerCount int64
-	IsFollow      bool
+	UserId        int64  `json:"user_id"`
+	Name          string `json:"name"`
+	FollowCount   int64  `json:"follow_count"`
+	FollowerCount int64  `json:"follower_count"`
+	IsFollow      bool   `json:"is_follow"`
 }
+
+const (
+	expiredSecond = 3600
+)
 
 func Register(username string, password string) (*LoginInfo, error) {
 	//check param
@@ -51,9 +57,14 @@ func Register(username string, password string) (*LoginInfo, error) {
 		return nil, err
 	}
 
+	token, err := util.GenToken(user.Id, time.Now().Unix()+expiredSecond)
+	if err != nil {
+		return nil, err
+	}
+
 	return &LoginInfo{
 		UserId: user.Id,
-		Token:  username + " " + password,
+		Token:  token,
 	}, nil
 }
 
@@ -71,7 +82,6 @@ func Login(username string, password string) (*LoginInfo, error) {
 	if len(password) > 32 {
 		return nil, errors.New("密码支持最长32个字符")
 	}
-
 	user, err := repository.SelectByName(username)
 	if err != nil {
 		return nil, err
@@ -82,28 +92,36 @@ func Login(username string, password string) (*LoginInfo, error) {
 	if user.Password != password {
 		return nil, errors.New("密码不正确")
 	}
+	token, err := util.GenToken(user.Id, time.Now().Unix()+expiredSecond)
+	if err != nil {
+		return nil, err
+	}
 
 	return &LoginInfo{
 		UserId: user.Id,
-		Token:  username + " " + password,
+		Token:  token,
 	}, nil
 }
 
 func GetUserInfo(userId int64, token string) (*UserInfo, error) {
 	if userId < 0 {
-		return nil, errors.New("不合法的用户id")
+		return nil, fmt.Errorf("不合法的用户id: %v", userId)
 	}
 
 	//varify token
-	tmp := strings.Split(token, " ")
-	login, err := Login(tmp[0], tmp[1])
-	if err != nil || login == nil {
-		return nil, errors.New("无效的token")
+	if token != "" {
+		_, err := util.ParseToken(token)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	user, err := repository.SelectById(userId)
 	if err != nil {
 		return nil, err
+	}
+	if user == nil {
+		return nil, fmt.Errorf("用户id不存在: %v", userId)
 	}
 
 	return &UserInfo{
